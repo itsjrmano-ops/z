@@ -1,0 +1,116 @@
+name: Build Android AAB
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install frontend deps
+        working-directory: library-frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: library-frontend
+        run: npm run build
+
+      - name: Install Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v2
+        with:
+          api-level: 34
+          target: android-34
+
+      - name: Copy web assets to android
+        run: npx cap copy android
+        working-directory: library-frontend
+
+      - name: Decrypt keystore
+        if: secrets.ANDROID_KEYSTORE_BASE64
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > library-frontend/android/debug.keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+
+      - name: Build AAB
+        working-directory: library-frontend/android
+        run: ./gradlew bundleRelease --no-daemon -Porg.gradle.jvmargs='-Xmx3g'
+
+      - name: Upload AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-aab
+          path: library-frontend/android/app/build/outputs/bundle/release/app-release.aab
+name: Build Android AAB
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install frontend deps
+        working-directory: library-frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: library-frontend
+        run: npm run build
+
+      - name: Install Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v2
+        with:
+          api-level: 34
+          target: android-34
+
+      - name: Copy web assets to android
+        run: npx cap copy android
+        working-directory: library-frontend
+
+      - name: Decrypt keystore
+        if: secrets.ANDROID_KEYSTORE_BASE64
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > library-frontend/android/debug.keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+
+      - name: Build AAB
+        working-directory: library-frontend/android
+        run: ./gradlew bundleRelease --no-daemon -Porg.gradle.jvmargs='-Xmx3g'
+
+      - name: Upload AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-aab
+          path: library-frontend/android/app/build/outputs/bundle/release/app-release.aab
